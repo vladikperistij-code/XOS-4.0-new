@@ -24,8 +24,17 @@ typedef struct {
 extern IDTEntry idt[256];
 extern IDTPtr idtp;
 
-static inline void outb(unsigned short port, unsigned char val) {
+// --- Функції роботи з портами (Inline Assembly) ---
+
+static inline void outb(uint16_t port, uint8_t val) {
     __asm__ volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
+}
+
+// ДОДАЙ ЦЮ ФУНКЦІЮ:
+static inline uint8_t inb(uint16_t port) {
+    uint8_t ret;
+    __asm__ volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
+    return ret;
 }
 
 static inline void idt_set_gate(int num, uint64_t base, uint16_t sel, uint8_t flags) {
@@ -39,6 +48,6 @@ static inline void idt_set_gate(int num, uint64_t base, uint16_t sel, uint8_t fl
 }
 
 void idt_init();
-void pic_remap(); // Додано прототип
+void pic_remap();
 
 #endif
