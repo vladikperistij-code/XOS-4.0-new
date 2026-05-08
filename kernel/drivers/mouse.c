@@ -7,6 +7,7 @@ typedef unsigned char u8;
 
 static BootInfo* g_m_binfo;
 int mouse_x = 400, mouse_y = 300;
+static int mouse_left = 0;
 u8 mouse_cycle = 0;
 s8 mouse_byte[3];           // Масив на 3 байти
 unsigned int m_back[144];   // Буфер для фону 12x12 (144 пікселі)
@@ -66,30 +67,39 @@ void mouse_handler() {
 
         if (mouse_cycle == 3) {
             mouse_cycle = 0;
+            mouse_left = mouse_byte[0] & 1;
 
-            // 1. Повертаємо фон
-            m_restore(mouse_x, mouse_y);
-
-            // 2. Оновлюємо координати (X - 2-й байт, Y - 3-й байт)
+            // Тільки оновлюємо координати, не малюємо тут!
             mouse_x += (int)mouse_byte[1];
             mouse_y -= (int)mouse_byte[2];
 
-            // Межі екрана
             if (mouse_x < 0) mouse_x = 0;
             if (mouse_y < 0) mouse_y = 0;
             if (mouse_x > g_m_binfo->ScreenWidth - 12) mouse_x = g_m_binfo->ScreenWidth - 12;
             if (mouse_y > g_m_binfo->ScreenHeight - 12) mouse_y = g_m_binfo->ScreenHeight - 12;
-
-            // 3. Зберігаємо новий фон і малюємо стрілку
-            m_save(mouse_x, mouse_y);
-            draw_mouse_ptr(mouse_x, mouse_y, 0xFFFFFFFF);
         }
     }
     outb(0xA0, 0x20); outb(0x20, 0x20);
 }
 
-// --- 5. Ініціалізація ---
+static int last_drawn_x = 400, last_drawn_y = 300;
 
+void mouse_restore_cursor() {
+    m_restore(last_drawn_x, last_drawn_y);
+}
+
+void mouse_draw_cursor() {
+    last_drawn_x = mouse_x;
+    last_drawn_y = mouse_y;
+    m_save(last_drawn_x, last_drawn_y);
+    draw_mouse_ptr(last_drawn_x, last_drawn_y, 0xFFFFFFFF);
+}
+
+int mouse_get_x() { return mouse_x; }
+int mouse_get_y() { return mouse_y; }
+int mouse_left_pressed() { return mouse_left; }
+
+// --- 5. Ініціалізація ---
 extern void mouse_asm_handler();
 
 void mouse_init(BootInfo* binfo) {

@@ -23,14 +23,21 @@ CFLAGS_KERN = -ffreestanding -fno-stack-protector -fno-pie -m64 -Wall -Iboot -Ik
 
 # --- Об'єкти ядра (ВАЖЛИВИЙ ПОРЯДОК) ---
 KERNEL_OBJS = $(BIN)/kernel.o $(BIN)/gpu.o $(BIN)/ram.o $(BIN)/cpu.o \
-              $(BIN)/rtc.o $(BIN)/idt.o $(BIN)/keyboard.o $(BIN)/mouse.o $(BIN)/interrupts.o
+              $(BIN)/rtc.o $(BIN)/idt.o $(BIN)/keyboard.o $(BIN)/mouse.o $(BIN)/interrupts.o \
+              $(BIN)/xfs.o $(BIN)/ata.o $(BIN)/explorer.o $(BIN)/xinfo.o
 
 # --- Головні цілі ---
+HD_IMG = hd.img
+
 all: prepare $(BIN)/bootx64.efi $(BIN)/kernel.bin
 
 prepare:
 	@mkdir -p "$(EFI_BOOT)"
 	@mkdir -p "$(BIN)"
+
+$(HD_IMG):
+	@echo "Creating persistent disk image $(HD_IMG)"
+	dd if=/dev/zero of=$(HD_IMG) bs=1M count=16 status=none
 
 # 1. Збірка завантажувача (UEFI)
 $(BIN)/bootx64.efi: boot/boot.c boot/mini_kernel.c
@@ -71,16 +78,31 @@ $(BIN)/keyboard.o: kernel/drivers/Keyboard.c
 $(BIN)/mouse.o: kernel/drivers/Mouse.c
 	$(CC) $(CFLAGS_KERN) -c $< -o $@
 
+$(BIN)/xfs.o: xfs/xfs.c xfs/xfs.h xfs/ata.h
+	$(CC) $(CFLAGS_KERN) -c $< -o $@
+
+$(BIN)/ata.o: xfs/ata.c xfs/ata.h
+	$(CC) $(CFLAGS_KERN) -c $< -o $@
+
+$(BIN)/explorer.o: apps/explorer.c apps/explorer.h xfs/xfs.h kernel/drivers/GPU.h
+	$(CC) $(CFLAGS_KERN) -c apps/explorer.c -o $@
+
+$(BIN)/xinfo.o: apps/xinfo.c apps/xinfo.h kernel/drivers/GPU.h
+	$(CC) $(CFLAGS_KERN) -c apps/xinfo.c -o $@
+
 # 4. Лінкування ядра (в чистому бінарному форматі)
 $(BIN)/kernel.bin: $(KERNEL_OBJS)
 	$(LD) -T kernel/linker.ld -static -nostdlib $(KERNEL_OBJS) -o $(BIN)/kernel.elf
 	$(OBJCOPY) -O binary $(BIN)/kernel.elf $@
 
 # --- Запуск та очищення ---
-run: all
+run: all $(HD_IMG)
 	cp "$(BIN)/bootx64.efi" "$(EFI_BOOT)/BOOTX64.EFI"
 	cp "$(BIN)/kernel.bin" "$(ISO_DIR)/kernel.bin"
-	qemu-system-x86_64 -bios $(OVMF) -drive file=fat:rw:"$(ISO_DIR)",format=raw -net none -m 256M
+	qemu-system-x86_64 -bios $(OVMF) \
+		-drive file=$(HD_IMG),format=raw,if=ide,index=0,media=disk \
+		-drive file=fat:rw:"$(ISO_DIR)",if=ide,index=1,format=raw,media=disk \
+		-net none -m 4000M
 
 clean:
 	rm -rf $(BIN)

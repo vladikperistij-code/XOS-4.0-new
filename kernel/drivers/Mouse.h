@@ -3,8 +3,14 @@
 
 #include "../../boot/boot_info.h"
 
-void mouse_init();
+void mouse_init(BootInfo* binfo);
 void mouse_handler();
-void draw_cursor(int x, int y);
+
+int mouse_get_x();
+int mouse_get_y();
+int mouse_left_pressed();
+
+void mouse_restore_cursor();
+void mouse_draw_cursor();
 
 #endif

@@ -1,18 +1,10 @@
 #include "RTC.h"
-
-// Функція для читання байта з порту (низькорівнева)
-unsigned char outb_read(unsigned char reg) {
-    __asm__ volatile ("outb %0, $0x70" : : "a"(reg));
-    unsigned char val;
-    __asm__ volatile ("inb $0x71, %0" : "=a"(val));
-    return val;
-}
+#include "IDT.h" // Використовуємо уніфіковані outb/inb
 
 void rtc_get_time(int* hour, int* minute, int* second) {
-    // Читаємо секунди, хвилини та години (в форматі BCD)
-    unsigned char s = outb_read(0x00);
-    unsigned char m = outb_read(0x02);
-    unsigned char h = outb_read(0x04);
+    outb(0x70, 0x00); unsigned char s = inb(0x71);
+    outb(0x70, 0x02); unsigned char m = inb(0x71);
+    outb(0x70, 0x04); unsigned char h = inb(0x71);
 
     // Перетворюємо BCD в звичайні числа
     *second = (s & 0x0F) + ((s / 16) * 10);

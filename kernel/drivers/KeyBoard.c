@@ -1,6 +1,7 @@
 #include "Keyboard.h"
 #include "IDT.h"
 #include "GPU.h"
+#include "../../apps/explorer.h"
 
 extern void keyboard_asm_handler(); // Наш місток з interrupts.asm
 
@@ -21,13 +22,17 @@ void keyboard_handler() {
     if (scancode < 58) {
         char key = keymap[scancode];
         if (key != 0) {
-            // Очищуємо місце під літеру (малюємо прямокутник кольору фону)
-            fill_rect(15, 150, 40, 40, 0x000057B7); 
-            
-            // Створюємо рядок з одного символу
-            char str[2] = {key, '\0'};
-            // Малюємо літеру великим шрифтом
-            draw_string_scaled(str, 15, 150, COLOR_WHITE, 3);
+            if (explorer_is_active()) {
+                explorer_on_key(key);
+            } else {
+                // Очищуємо місце під літеру (малюємо прямокутник кольору фону)
+                fill_rect(15, 150, 40, 40, 0x000057B7); 
+                
+                // Створюємо рядок з одного символу
+                char str[2] = {key, '\0'};
+                // Малюємо літеру великим шрифтом
+                draw_string_scaled(str, 15, 150, COLOR_WHITE, 3);
+            }
         }
     }
 

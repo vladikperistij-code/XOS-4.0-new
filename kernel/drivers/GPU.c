@@ -18,9 +18,14 @@ unsigned int get_pixel(unsigned int x, unsigned int y) {
 }
 
 void fill_rect(unsigned int x, unsigned int y, unsigned int w, unsigned int h, unsigned int color) {
-    for (unsigned int cy = y; cy < y + h; cy++) {
-        for (unsigned int cx = x; cx < x + w; cx++) {
-            put_pixel(cx, cy, color);
+    if (x >= g_binfo->ScreenWidth || y >= g_binfo->ScreenHeight) return;
+    if (x + w > g_binfo->ScreenWidth) w = g_binfo->ScreenWidth - x;
+    if (y + h > g_binfo->ScreenHeight) h = g_binfo->ScreenHeight - y;
+
+    for (unsigned int cy = 0; cy < h; cy++) {
+        unsigned int* line = &g_binfo->FramebufferBase[(y + cy) * g_binfo->PixelsPerScanLine + x];
+        for (unsigned int cx = 0; cx < w; cx++) {
+            line[cx] = color;
         }
     }
 }
